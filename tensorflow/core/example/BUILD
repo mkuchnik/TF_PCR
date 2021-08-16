@@ -100,6 +100,18 @@ tf_proto_library(
 )
 
 tf_proto_library(
+    name = "progressive_compressed_protos",
+    srcs = [
+        "progressive_compressed_record.proto",
+    ],
+    protodeps = [
+        ":example_protos",
+    ],
+    cc_api_version = 2,
+    make_default_target_header_only = True,
+)
+
+tf_proto_library(
     name = "example_parser_configuration_proto",
     srcs = ["example_parser_configuration.proto"],
     cc_api_version = 2,
@@ -118,6 +130,7 @@ tf_proto_library(
     protodeps = [
         ":example_protos",
         ":example_parser_configuration_proto",
+        ":progressive_compressed_protos",
     ],
     tags = [
         "alt_dep=//third_party/tensorflow/core:protos_all",

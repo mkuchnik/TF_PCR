@@ -66,6 +66,7 @@ def enable_v2_behavior():
   dataset_ops.Dataset = dataset_ops.DatasetV2
   readers.FixedLengthRecordDataset = readers.FixedLengthRecordDatasetV2
   readers.TFRecordDataset = readers.TFRecordDatasetV2
+  readers.ProgressiveCompressedRecordDataset = readers.ProgressiveCompressedRecordDatasetV2
   readers.TextLineDataset = readers.TextLineDatasetV2
   counter.Counter = counter.CounterV2
   interleave_ops.choose_from_datasets = interleave_ops.choose_from_datasets_v2
@@ -101,6 +102,7 @@ def disable_v2_behavior():
   dataset_ops.Dataset = dataset_ops.DatasetV1
   readers.FixedLengthRecordDataset = readers.FixedLengthRecordDatasetV1
   readers.TFRecordDataset = readers.TFRecordDatasetV1
+  readers.ProgressiveCompressedRecordDataset = readers.ProgressiveCompressedRecordDatasetV1
   readers.TextLineDataset = readers.TextLineDatasetV1
   counter.Counter = counter.CounterV1
   interleave_ops.choose_from_datasets = interleave_ops.choose_from_datasets_v1

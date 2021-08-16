@@ -828,6 +828,26 @@ tf_py_test(
     ],
 )
 
+tf_py_test(
+    name = "progressive_compressed_record_dataset_test",
+    size = "small",
+    srcs = ["progressive_compressed_record_dataset_test.py"],
+    data = ["//tensorflow/core:image_testdata"],
+    deps = [
+        ":test_base",
+        "//tensorflow/python:array_ops",
+        "//tensorflow/python:client_testlib",
+        "//tensorflow/python:constant_op",
+        "//tensorflow/python:dtypes",
+        "//tensorflow/python:errors",
+        "//tensorflow/python:lib",
+        "//tensorflow/python:util",
+        "//tensorflow/python/data/ops:dataset_ops",
+        "//tensorflow/python/data/ops:iterator_ops",
+        "//tensorflow/python/data/ops:readers",
+    ],
+)
+
 py_library(
     name = "tf_record_test_base",
     srcs = [

@@ -33,6 +33,10 @@ tf_module {
     mtype: "<type \'type\'>"
   }
   member {
+    name: "ProgressiveCompressedRecordDataset"
+    mtype: "<type \'type\'>"
+  }
+  member {
     name: "TFRecordDataset"
     mtype: "<type \'type\'>"
   }
@@ -47,5 +51,9 @@ tf_module {
   member {
     name: "experimental"
     mtype: "<type \'module\'>"
+  }
+  member_method {
+    name: "parse_data_and_label_from_PCR_Dataset"
+    argspec: "args=[\'PCR_bytes\'], varargs=None, keywords=None, defaults=None"
   }
 }

@@ -276,6 +276,90 @@ class _TFRecordDataset(dataset_ops.DatasetSource):
   def element_spec(self):
     return tensor_spec.TensorSpec([], dtypes.string)
 
+@tf_export("data.parse_data_and_label_from_PCR_Dataset")
+def parse_data_and_label_from_PCR_Dataset(PCR_bytes):
+    from tensorflow.python.ops import parsing_ops
+    from tensorflow.python.ops import string_ops
+    """ Splits a PCR record with label information into data and label pairs.
+
+    PCRs forward data (x) only by default, but include labels (y) if
+    `metadata_output_type` is set accordingly.
+    These labels are packed into the data itself for now.
+    This function splits the PCR data into (x,y) tuples rather than just x.
+    Args:
+        PCR_bytes The bytes returned from a PCR dataset
+    Returns:
+        The (encode_image_bytes, image_label) tuple
+    """
+    label_data = string_ops.substr(PCR_bytes, 0, 4) # First 4 bytes are label
+    img_data = string_ops.substr(PCR_bytes, 4, -1)
+    img_data = array_ops.reshape(img_data, shape=[])
+    label = parsing_ops.decode_raw(label_data, dtypes.int32)
+    label = array_ops.reshape(label, shape=[])
+    return img_data, label
+
+class _ProgressiveCompressedRecordDataset(dataset_ops.DatasetSource):
+  """A `Dataset` comprising records from one or more ProgressiveCompressedRecord files."""
+
+  def __init__(self, filenames, compression_type=None, buffer_size=None,
+               scan_groups=None, index_source_filename=None,
+               metadata_output_type=None):
+    """Creates a `ProgressiveCompressedRecordDataset`.
+
+    Args:
+      filenames: A `tf.string` tensor containing one or more filenames.
+      compression_type: (Optional.) A `tf.string` scalar evaluating to one of
+        `""` (no compression). Not supported.
+      buffer_size: (Optional.) A `tf.int64` scalar representing the number of
+        bytes in the read buffer. 0 means no buffering.
+      scan_groups: (Optional.) A `tf.int32` scalar representing the number of
+      scan groups to use for PCR decoding.
+      index_source_filename: (Optional.) A `tf.string` scalar representing the
+      file to use for creating an index.
+      metadata_output_type: (Optional.) A `tf.string` scalar specifying the
+      type of output encoding used. One of `""` (raw image bytes) or
+      `"labels_first" (encode labels in first 4 bytes).
+    """
+    self._filenames = filenames
+    self._compression_type = convert.optional_param_to_tensor(
+        "compression_type",
+        compression_type,
+        argument_default="",
+        argument_dtype=dtypes.string)
+    self._buffer_size = convert.optional_param_to_tensor(
+        "buffer_size",
+        buffer_size,
+        argument_default=_DEFAULT_READER_BUFFER_SIZE_BYTES)
+    # TODO(mkuchnik): Make not optional
+    self._scan_groups = convert.optional_param_to_tensor(
+        "scan_groups",
+        scan_groups,
+        argument_default=-1,
+        argument_dtype=dtypes.int32)
+    # TODO(mkuchnik): Make not optional
+    self._index_source_filename = convert.optional_param_to_tensor(
+        "index_source_filename",
+        index_source_filename,
+        argument_default="",
+        argument_dtype=dtypes.string)
+    self._metadata_output_type = convert.optional_param_to_tensor(
+        "metadata_output_type",
+        metadata_output_type,
+        argument_default="",
+        argument_dtype=dtypes.string)
+    variant_tensor = gen_dataset_ops.progressive_compressed_record_dataset(
+        self._filenames,
+        self._compression_type,
+        self._buffer_size,
+        self._scan_groups,
+        self._index_source_filename,
+        self._metadata_output_type,
+    )
+    super(_ProgressiveCompressedRecordDataset, self).__init__(variant_tensor)
+
+  @property
+  def element_spec(self):
+    return tensor_spec.TensorSpec([], dtypes.string)
 
 class ParallelInterleaveDataset(dataset_ops.UnaryDataset):
   """A `Dataset` that maps a function over its input and flattens the result."""
@@ -473,6 +557,140 @@ class TFRecordDatasetV1(dataset_ops.DatasetV1Adapter):
   def _filenames(self, value):
     self._dataset._filenames = value  # pylint: disable=protected-access
 
+@tf_export("data.ProgressiveCompressedRecordDataset", v1=[])
+class ProgressiveCompressedRecordDatasetV2(dataset_ops.DatasetV2):
+  """A `Dataset` comprising records from one or more ProgressiveCompressedRecord files."""
+
+  def __init__(self,
+               filenames,
+               compression_type=None,
+               buffer_size=None,
+               num_parallel_reads=None,
+               scan_groups=None,
+               index_source_filename=None,
+               metadata_output_type=None):
+    """Creates a `ProgressiveCompressedRecordDataset` to read one or more
+    ProgressiveCompressedRecord files.
+
+    Args:
+      filenames: A `tf.string` tensor or `tf.data.Dataset` containing one or
+        more filenames.
+      compression_type: (Optional.) A `tf.string` scalar evaluating to one of
+        `""` (no compression). Not supported.
+      buffer_size: (Optional.) A `tf.int64` scalar representing the number of
+        bytes in the read buffer. If your input pipeline is I/O bottlenecked,
+        consider setting this parameter to a value 1-100 MBs. If `None`, a
+        sensible default for both local and remote file systems is used.
+      num_parallel_reads: (Optional.) A `tf.int64` scalar representing the
+        number of files to read in parallel. If greater than one, the records of
+        files read in parallel are outputted in an interleaved order. If your
+        input pipeline is I/O bottlenecked, consider setting this parameter to a
+        value greater than one to parallelize the I/O. If `None`, files will be
+        read sequentially.
+      scan_groups: (Optional.) A `tf.int32` scalar representing the number of
+      PCR scan groups to use.
+      index_source_filename: (Optional.) A `tf.string` scalar containing the
+      source to use for building scan group index.
+      metadata_output_type: (Optional.) A `tf.string` scalar specifying the
+      type of output encoding used. One of `""` (raw image bytes) or
+      `"labels_first" (encode labels in first 4 bytes).
+
+    Raises:
+      TypeError: If any argument does not have the expected type.
+      ValueError: If any argument does not have the expected shape.
+    """
+    filenames = _create_or_validate_filenames_dataset(filenames)
+
+    self._filenames = filenames
+    self._compression_type = compression_type
+    self._buffer_size = buffer_size
+    self._num_parallel_reads = num_parallel_reads
+    self._scan_groups = scan_groups
+    self._index_source_filename = index_source_filename
+    self._metadata_output_type = metadata_output_type
+
+    def creator_fn(filename):
+      return _ProgressiveCompressedRecordDataset(filename, compression_type,
+                                                 buffer_size, scan_groups,
+                                                 index_source_filename,
+                                                 metadata_output_type)
+
+    self._impl = _create_dataset_reader(creator_fn, filenames,
+                                        num_parallel_reads)
+    variant_tensor = self._impl._variant_tensor  # pylint: disable=protected-access
+    super(ProgressiveCompressedRecordDatasetV2, self).__init__(variant_tensor)
+
+  def _clone(self,
+             filenames=None,
+             compression_type=None,
+             buffer_size=None,
+             num_parallel_reads=None,
+             scan_groups=None,
+             index_source_filename=None,
+             metadata_output_type=None):
+    return ProgressiveCompressedRecordDataset(
+        filenames or self._filenames,
+        compression_type or self._compression_type,
+        buffer_size or self._buffer_size,
+        num_parallel_reads or self._num_parallel_reads,
+        scan_groups or self._scan_groups,
+        index_source_filename or self._index_source_filename,
+        metadata_output_type or self._metadata_output_type
+    )
+
+  def _inputs(self):
+    return self._impl._inputs()  # pylint: disable=protected-access
+
+  @property
+  def element_spec(self):
+    return tensor_spec.TensorSpec([], dtypes.string)
+
+
+@tf_export(v1=["data.ProgressiveCompressedRecordDataset"])
+class ProgressiveCompressedRecordDatasetV1(dataset_ops.DatasetV1Adapter):
+  """A `Dataset` comprising records from one or more ProgressiveCompressedRecord files."""
+
+  def __init__(self,
+               filenames,
+               compression_type=None,
+               buffer_size=None,
+               num_parallel_reads=None,
+               scan_groups=None,
+               index_source_filename=None,
+               metadata_output_type=None):
+    wrapped = ProgressiveCompressedRecordDatasetV2(filenames, compression_type, buffer_size,
+                                                   num_parallel_reads, scan_groups,
+                                                   index_source_filename,
+                                                   metadata_output_type)
+    super(ProgressiveCompressedRecordDatasetV1, self).__init__(wrapped)
+
+  __init__.__doc__ = ProgressiveCompressedRecordDatasetV2.__init__.__doc__
+
+  def _clone(self,
+             filenames=None,
+             compression_type=None,
+             buffer_size=None,
+             num_parallel_reads=None,
+             scan_groups=None,
+             index_source_filename=None,
+             metadata_output_type=None):
+    return ProgressiveCompressedRecordDataset(
+        filenames or self._filenames,
+        compression_type or self._compression_type,
+        buffer_size or self._buffer_size,
+        num_parallel_reads or self._num_parallel_reads,
+        scan_groups or self._scan_groups,
+        index_source_filename or self._index_source_filename,
+        metadata_output_type or self._metadata_output_type
+    )
+
+  @property
+  def _filenames(self):
+    return self._dataset._filenames  # pylint: disable=protected-access
+
+  @_filenames.setter
+  def _filenames(self, value):
+    self._dataset._filenames = value  # pylint: disable=protected-access
 
 class _FixedLengthRecordDataset(dataset_ops.DatasetSource):
   """A `Dataset` of fixed-length records from one or more binary files."""
@@ -644,7 +862,9 @@ if tf2.enabled():
   FixedLengthRecordDataset = FixedLengthRecordDatasetV2
   TFRecordDataset = TFRecordDatasetV2
   TextLineDataset = TextLineDatasetV2
+  ProgressiveCompressedRecordDataset = ProgressiveCompressedRecordDatasetV2
 else:
   FixedLengthRecordDataset = FixedLengthRecordDatasetV1
   TFRecordDataset = TFRecordDatasetV1
   TextLineDataset = TextLineDatasetV1
+  ProgressiveCompressedRecordDataset = ProgressiveCompressedRecordDatasetV1

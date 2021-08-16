@@ -2953,6 +2953,10 @@ tf_module {
     argspec: "args=[\'input\', \'axis\', \'keep_dims\', \'name\'], varargs=None, keywords=None, defaults=[\'False\', \'None\'], "
   }
   member_method {
+    name: "ProgressiveCompressedRecordDataset"
+    argspec: "args=[\'filenames\', \'compression_type\', \'buffer_size\', \'scan_groups\', \'index_source_filename\', \'metadata_output_type\', \'name\'], varargs=None, keywords=None, defaults=[\'None\'], "
+  }
+  member_method {
     name: "PyFunc"
     argspec: "args=[\'input\', \'token\', \'Tout\', \'name\'], varargs=None, keywords=None, defaults=[\'None\'], "
   }

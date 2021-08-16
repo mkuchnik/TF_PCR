@@ -163,6 +163,45 @@ cc_library(
 )
 
 cc_library(
+    name = "progressive_compressed_record_reader",
+    srcs = ["progressive_compressed_record_reader.cc"],
+    hdrs = ["progressive_compressed_record_reader.h"],
+    deps = [
+        ":buffered_inputstream",
+        ":compression",
+        ":inputstream_interface",
+        ":random_inputstream",
+        "//tensorflow/core/lib/core:coding",
+        "//tensorflow/core/lib/core:errors",
+        "//tensorflow/core/lib/core:stringpiece",
+        "//tensorflow/core/lib/hash:crc32c",
+        "//tensorflow/core/platform:env",
+        "//tensorflow/core/platform:macros",
+        "//tensorflow/core/platform:types",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
+    name = "progressive_compressed_record_writer",
+    srcs = ["progressive_compressed_record_writer.cc"],
+    hdrs = ["progressive_compressed_record_writer.h"],
+    deps = [
+        ":compression",
+        "//tensorflow/core:framework",
+        "//tensorflow/core/lib/core:coding",
+        "//tensorflow/core/lib/core:status",
+        "//tensorflow/core/lib/core:stringpiece",
+        "//tensorflow/core/lib/hash:crc32c",
+        "//tensorflow/core/platform:cord",
+        "//tensorflow/core/platform:env",
+        "//tensorflow/core/platform:macros",
+        "//tensorflow/core/platform:types",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
     name = "record_writer",
     srcs = ["record_writer.cc"],
     hdrs = ["record_writer.h"],
@@ -319,6 +358,10 @@ filegroup(
         "random_inputstream.h",
         "record_reader.cc",
         "record_reader.h",
+        "progressive_compressed_record_reader.cc",
+        "progressive_compressed_record_reader.h",
+        "progressive_compressed_record_writer.cc",
+        "progressive_compressed_record_writer.h",
         "table.cc",
         "table.h",
         "table_builder.cc",
@@ -352,6 +395,8 @@ filegroup(
         "random_inputstream.h",
         "record_reader.h",
         "record_writer.h",
+        "progressive_compressed_record_reader.h",
+        "progressive_compressed_record_writer.h",
         "table.h",
         "table_builder.h",
         "table_options.h",
@@ -396,6 +441,8 @@ filegroup(
         "proto_encode_helper.h",
         "random_inputstream.h",
         "record_reader.h",
+        "progressive_compressed_record_reader.h",
+        "progressive_compressed_record_writer.h",
         "record_writer.h",
         "table.h",
         "table_builder.h",

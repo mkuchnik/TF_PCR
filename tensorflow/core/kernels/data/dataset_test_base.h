@@ -53,6 +53,7 @@ limitations under the License.
 #include "tensorflow/core/platform/threadpool.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/tensor_slice_reader_cache.h"
+#include "tensorflow/core/example/example.pb.h"
 
 namespace tensorflow {
 namespace data {
@@ -116,6 +117,15 @@ Status WriteDataToFile(const string& filename, const char* data,
 Status WriteDataToTFRecordFile(const string& filename,
                                const std::vector<absl::string_view>& records,
                                const CompressionParams& params);
+
+// Writes the input data into the PCR file with the specified compression.
+Status WriteDataToProgressiveCompressedRecordFile(
+    const string& filename,
+    std::vector<size_t>& index_offsets,
+    const std::vector<int32>& labels,
+    const std::vector<std::vector<absl::string_view>>& records,
+    const std::vector<Example>& example_metadata,
+    const CompressionParams& params);
 
 // Provides the parameters for running the dataset op.
 class DatasetParams {

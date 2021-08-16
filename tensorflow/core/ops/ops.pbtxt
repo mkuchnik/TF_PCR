@@ -53695,6 +53695,26 @@ op {
   is_stateful: true
 }
 op {
+  name: "ProgressiveCompressedRecordDataset"
+  input_arg {
+    name: "filenames"
+    type: DT_STRING
+  }
+  input_arg {
+    name: "compression_type"
+    type: DT_STRING
+  }
+  input_arg {
+    name: "buffer_size"
+    type: DT_INT64
+  }
+  output_arg {
+    name: "handle"
+    type: DT_VARIANT
+  }
+  is_stateful: true
+}
+op {
   name: "TFRecordReader"
   output_arg {
     name: "reader_handle"

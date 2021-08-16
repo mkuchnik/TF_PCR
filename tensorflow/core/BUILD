@@ -1338,6 +1338,8 @@ cc_library(
         "//tensorflow/core/lib/io:iterator",
         "//tensorflow/core/lib/io:path",
         "//tensorflow/core/lib/io:proto_encode_helper",
+        "//tensorflow/core/lib/io:progressive_compressed_record_reader",
+        "//tensorflow/core/lib/io:progressive_compressed_record_writer",
         "//tensorflow/core/lib/io:random_inputstream",
         "//tensorflow/core/lib/io:record_reader",
         "//tensorflow/core/lib/io:record_writer",

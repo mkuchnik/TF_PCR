@@ -1809,6 +1809,10 @@ tf_module {
     argspec: "args=[], varargs=inputs, keywords=kwargs, defaults=None"
   }
   member_method {
+    name: "progressive_compressed_record_dataset"
+    argspec: "args=[\'filenames\', \'compression_type\', \'buffer_size\', \'scan_groups\', \'index_source_filename\', \'metadata_output_type\', \'name\'], varargs=None, keywords=None, defaults=[\'None\'], "
+  }
+  member_method {
     name: "py_func"
     argspec: "args=[\'func\', \'inp\', \'Tout\', \'stateful\', \'name\'], varargs=None, keywords=None, defaults=[\'True\', \'None\'], "
   }

@@ -18,12 +18,13 @@ limitations under the License.
 
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/platform/path.h"
+#include "tensorflow/core/platform/default/posix_throttle.h"
 
 namespace tensorflow {
 
 class PosixFileSystem : public FileSystem {
  public:
-  PosixFileSystem() {}
+  PosixFileSystem();
 
   ~PosixFileSystem() {}
 
@@ -68,6 +69,8 @@ class PosixFileSystem : public FileSystem {
 
   Status CopyFile(const string& src, const string& target,
                   TransactionToken* token) override;
+ private:
+    const std::shared_ptr<PosixThrottle> throttle_;
 };
 
 Status IOError(const string& context, int err_number);

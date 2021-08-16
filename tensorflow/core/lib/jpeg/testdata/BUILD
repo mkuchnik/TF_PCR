@@ -9,7 +9,7 @@ package(
 
 filegroup(
     name = "testdata",
-    srcs = glob(["*.jpg"]),
+    srcs = glob(["*.jpg", "*.pb", "*.pcr"]),
     visibility = [
         "//tensorflow/core:__pkg__",
         "//tensorflow/core/lib/jpeg:__pkg__",

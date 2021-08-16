@@ -42,8 +42,15 @@ def _TFRecordDataset(filename: Text) -> dataset_ops.Dataset:
   return dataset
 
 
+def _ProgressiveCompressedRecordDataset(filename):
+  buffer_size = 8 * 1024 * 1024  # 8 MiB per file
+  dataset = readers.ProgressiveCompressedRecordDataset(filename, buffer_size=buffer_size)
+  return dataset
+
+
 _FILETYPE_MAP = {
     'tfrecord': _TFRecordDataset,
+    'progressivecompressedrecord': _ProgressiveCompressedRecordDataset,
     'textline': _TextLineDataset,
     'text': _TextLineDataset,
 }
@@ -78,7 +85,7 @@ def StreamingFilesDataset(
   Args:
     files: A string glob to match files, or a `tf.data.Dataset` generating file
       names.
-    filetype: A string (one of 'tfrecord', or 'textline') or a single-argument
+    filetype: A string (one of 'tfrecord', 'progressivecompressedrecord', or 'textline') or a single-argument
       TensorFlow function that when given a filename returns a dataset.
     file_reader_job: An optional string that corresponds to the job that should
       perform the file reads.

@@ -157,6 +157,11 @@ class DatasetTest(test_base.DatasetTestBase, parameterized.TestCase):
     dataset = readers.TFRecordDataset("")
     self._testNumInputs(dataset, 1)
 
+  @combinations.generate(test_base.default_test_combinations())
+  def testProgressiveCompressedRecordInputs(self):
+    dataset = readers.ProgressiveCompressedRecordDataset("")
+    self._testNumInputs(dataset, 1)
+
   @combinations.generate(
       combinations.combine(tf_api_version=1, mode=["eager", "graph"]))
   def testDatasetComplexSourceInputs(self):

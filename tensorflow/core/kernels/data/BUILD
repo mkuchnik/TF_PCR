@@ -1529,6 +1529,40 @@ tf_cc_test(
     ],
 )
 
+tf_kernel_library(
+    name = "progressive_compressed_record_dataset_op",
+    srcs = ["progressive_compressed_record_dataset_op.cc"],
+    hdrs = ["progressive_compressed_record_dataset_op.h"],
+    deps = [
+        ":name_utils",
+        "//tensorflow/core:core_cpu_internal",
+        "//tensorflow/core:dataset_ops_op_lib",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:lib_internal",
+    ],
+)
+
+tf_cc_test(
+    name = "progressive_compressed_record_dataset_op_test",
+    size = "small",
+    srcs = ["progressive_compressed_record_dataset_op_test.cc"],
+    deps = [
+        ":dataset_test_base",
+        ":dataset_utils",
+        ":iterator_ops",
+        ":progressive_compressed_record_dataset_op",
+        "//tensorflow/core:core_cpu_internal",
+        "//tensorflow/core:dataset_ops_op_lib",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib_internal",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
+)
+
+
 cc_library(
     name = "unbounded_thread_pool",
     srcs = ["unbounded_thread_pool.cc"],
@@ -1679,6 +1713,7 @@ tf_kernel_library(
         ":parallel_interleave_dataset_op",
         ":parallel_map_dataset_op",
         ":prefetch_dataset_op",
+        ":progressive_compressed_record_dataset_op",
         ":range_dataset_op",
         ":repeat_dataset_op",
         ":shard_dataset_op",

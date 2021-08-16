@@ -69,6 +69,7 @@ limitations under the License.
 #include "tensorflow/core/lib/core/status_test_util.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "tensorflow/core/lib/io/record_writer.h"
+#include "tensorflow/core/lib/io/progressive_compressed_record_writer.h"
 #include "tensorflow/core/lib/io/zlib_compression_options.h"
 #include "tensorflow/core/lib/io/zlib_outputbuffer.h"
 #include "tensorflow/core/platform/bfloat16.h"
@@ -165,6 +166,29 @@ Status WriteDataToTFRecordFile(const string& filename,
   for (const auto& record : records) {
     TF_RETURN_IF_ERROR(record_writer.WriteRecord(record));
   }
+  TF_RETURN_IF_ERROR(record_writer.Flush());
+  TF_RETURN_IF_ERROR(record_writer.Close());
+  TF_RETURN_IF_ERROR(file_writer->Flush());
+  TF_RETURN_IF_ERROR(file_writer->Close());
+  return Status::OK();
+}
+
+Status WriteDataToProgressiveCompressedRecordFile(
+    const string& filename,
+    std::vector<size_t>& index_offsets,
+    const std::vector<int32>& labels,
+    const std::vector<std::vector<absl::string_view>>& records,
+    const std::vector<Example>& example_metadata,
+    const CompressionParams& params) {
+  Env* env = Env::Default();
+  std::unique_ptr<WritableFile> file_writer;
+  TF_RETURN_IF_ERROR(env->NewWritableFile(filename, &file_writer));
+  auto options = io::PCRWriterOptions::CreateRecordWriterOptions(
+      ToString(params.compression_type));
+  io::PCRWriter record_writer(file_writer.get(),
+                              options);
+  TF_RETURN_IF_ERROR(record_writer.WriteRecords(
+        labels, records, example_metadata, index_offsets));
   TF_RETURN_IF_ERROR(record_writer.Flush());
   TF_RETURN_IF_ERROR(record_writer.Close());
   TF_RETURN_IF_ERROR(file_writer->Flush());

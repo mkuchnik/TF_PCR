@@ -44,15 +44,88 @@ namespace tensorflow {
 // 128KB of copy buffer
 constexpr size_t kPosixCopyFileBufferSize = 128 * 1024;
 
+// The environment variable to configure the throttle (format: <int64>)
+constexpr char kThrottleRate[] = "POSIX_THROTTLE_TOKEN_RATE";
+// The environment variable to configure the token bucket size (format: <int64>)
+constexpr char kThrottleBucket[] = "POSIX_THROTTLE_BUCKET_SIZE";
+// The environment variable that controls the number of tokens per request.
+// (format: <int64>)
+constexpr char kTokensPerRequest[] = "POSIX_TOKENS_PER_REQUEST";
+// The environment variable to configure the initial tokens (format: <int64>)
+constexpr char kInitialTokens[] = "POSIX_INITIAL_TOKENS";
+
+// Helper function to extract an environment variable and convert it into a
+// value of type T.
+template <typename T>
+bool GetEnvVar(const char* varname, bool (*convert)(StringPiece, T*),
+               T* value) {
+  const char* env_value = std::getenv(varname);
+  if (env_value == nullptr) {
+    return false;
+  }
+  return convert(env_value, value);
+}
+
+PosixFileSystem::PosixFileSystem():
+  throttle_(std::make_shared<PosixThrottle>()) {
+  int64 token_value;
+  if (GetEnvVar(kThrottleRate, strings::safe_strto64, &token_value)) {
+    PosixThrottleConfig config;
+    config.enabled = true;
+    config.token_rate = token_value;
+
+    if (GetEnvVar(kThrottleBucket, strings::safe_strto64, &token_value)) {
+      config.bucket_size = token_value;
+    }
+
+    if (GetEnvVar(kTokensPerRequest, strings::safe_strto64, &token_value)) {
+      config.tokens_per_request = token_value;
+    } else {
+      // NOTE(mkuchnik): no per-read limit by default
+      config.tokens_per_request = 0;
+    }
+
+    if (GetEnvVar(kInitialTokens, strings::safe_strto64, &token_value)) {
+      config.initial_tokens = token_value;
+    }
+    throttle_->SetConfig(config);
+    LOG(ERROR) << "Throttling is enabled with BW limit of "
+               << throttle_->available_max_bandwidth_kibytes_sec()
+               << "kiB/s";
+  }
+}
+
 // pread() based random-access
 class PosixRandomAccessFile : public RandomAccessFile {
  private:
   string filename_;
   int fd_;
+  const std::shared_ptr<PosixThrottle> throttle_;
+
+  void maybe_wait_on_throttle() const {
+    if (throttle_) {
+      bool is_admitted = throttle_->AdmitRequest();
+      while (!is_admitted) {
+        Env::Default()->SleepForMicroseconds(50000); // Sleep for 50ms
+        is_admitted = throttle_->AdmitRequest();
+      }
+    }
+  }
+
+  void maybe_record_throttle_bytes(size_t bytes) const {
+    if (throttle_) {
+      throttle_->RecordResponse(bytes);
+    }
+  }
 
  public:
   PosixRandomAccessFile(const string& fname, int fd)
       : filename_(fname), fd_(fd) {}
+
+  PosixRandomAccessFile(const string& fname, int fd,
+      std::shared_ptr<PosixThrottle> throttle)
+      : filename_(fname), fd_(fd), throttle_(throttle) {}
+
   ~PosixRandomAccessFile() override {
     if (close(fd_) < 0) {
       LOG(ERROR) << "close() failed: " << strerror(errno);
@@ -66,6 +139,7 @@ class PosixRandomAccessFile : public RandomAccessFile {
 
   Status Read(uint64 offset, size_t n, StringPiece* result,
               char* scratch) const override {
+    maybe_wait_on_throttle();
     Status s;
     char* dst = scratch;
     while (n > 0 && s.ok()) {
@@ -91,6 +165,7 @@ class PosixRandomAccessFile : public RandomAccessFile {
         s = IOError(filename_, errno);
       }
     }
+    maybe_record_throttle_bytes(dst - scratch);
     *result = StringPiece(scratch, dst - scratch);
     return s;
   }
@@ -229,7 +304,11 @@ Status PosixFileSystem::NewRandomAccessFile(
   if (fd < 0) {
     s = IOError(fname, errno);
   } else {
-    result->reset(new PosixRandomAccessFile(translated_fname, fd));
+    if (throttle_ && throttle_->is_enabled()) {
+      result->reset(new PosixRandomAccessFile(translated_fname, fd, throttle_));
+    } else {
+      result->reset(new PosixRandomAccessFile(translated_fname, fd));
+    }
   }
   return s;
 }
